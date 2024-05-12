@@ -24,7 +24,7 @@ public class QuizServer {
 
             // Receive questions and answers from the user
             for (int i = 0; i < numQuestions; i++) {
-                System.out.print("Enter question " + (i + 1) + ": ");
+                System.out.print("\nEnter question " + (i + 1) + ": ");
                 String question = scanner.nextLine();
                 if(question.isEmpty()) {
                     System.out.println("Question cannot be empty. Please enter again.");
@@ -76,8 +76,6 @@ public class QuizServer {
         return numQuestions;
     }
 
-
-
     public static List<String> getQuestions() {
         return questions;
     }
@@ -94,6 +92,7 @@ public class QuizServer {
         clientResponses.put(clientHandler, responses);
     }
 
+    // get the clients responses
     public static void printClientResponses() {
         for (Map.Entry<ClientHandler, String[]> entry : clientResponses.entrySet()) {
             ClientHandler client = entry.getKey();

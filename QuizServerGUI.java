@@ -7,106 +7,110 @@ import java.util.*;
 import java.util.List;
 
 public class QuizServerGUI extends JFrame {
-    private JLabel numQuestionsLabel;
-    private JTextField numQuestionsField;
-    private JButton startButton;
-    private JTextArea questionArea;
+    private Map<ClientHandler, String[]> clientResponses = new HashMap<>();
+    private List<String> questions = new ArrayList<>();
+    private Map<String, String[]> answersMap = new HashMap<>();
+    private int numQuestions;
+    private int questionIndex = 0;
+
+    private JLabel questionLabel;
+    private JTextField questionField;
     private JTextField[] answerFields;
-    private JButton submitButton;
-    private ServerSocket serverSocket;
-    private List<String> questions;
-    private Map<String, String[]> answersMap;
 
     public QuizServerGUI() {
         setTitle("Quiz Server");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(400, 300);
-        setLayout(new GridLayout(0, 1));
+        setLocationRelativeTo(null); // Center the frame on screen
 
-        numQuestionsLabel = new JLabel("Number of questions:");
-        numQuestionsField = new JTextField();
-        startButton = new JButton("Start Quiz");
-        questionArea = new JTextArea();
-        questionArea.setEditable(false);
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        JPanel questionPanel = new JPanel(new GridLayout(6, 1));
+        JPanel buttonPanel = new JPanel();
+
+        questionLabel = new JLabel("Question:");
+        questionField = new JTextField();
         answerFields = new JTextField[4];
         for (int i = 0; i < 4; i++) {
             answerFields[i] = new JTextField();
         }
-        submitButton = new JButton("Submit");
 
-        add(numQuestionsLabel);
-        add(numQuestionsField);
-        add(startButton);
-
-        startButton.addActionListener(new ActionListener() {
+        JButton nextButton = new JButton("Next");
+        nextButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                startQuiz();
+                if (questionIndex < numQuestions) {
+                    String question = questionField.getText();
+                    if (question.isEmpty()) {
+                        JOptionPane.showMessageDialog(null, "Question cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    questions.add(question);
+
+                    String[] options = new String[4];
+                    for (int i = 0; i < options.length; i++) {
+                        String answer = answerFields[i].getText();
+                        if (answer.isEmpty()) {
+                            JOptionPane.showMessageDialog(null, "Option cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+                        options[i] = answer;
+                    }
+                    answersMap.put(question, options);
+
+                    questionIndex++;
+                    if (questionIndex < numQuestions) {
+                        questionLabel.setText("Question " + (questionIndex + 1) + ":");
+                        questionField.setText("");
+                        for (int i = 0; i < 4; i++) {
+                            answerFields[i].setText("");
+                        }
+                    } else {
+                        startServer();
+                    }
+                }
             }
         });
 
-        add(questionArea);
+        questionPanel.add(questionLabel);
+        questionPanel.add(questionField);
         for (int i = 0; i < 4; i++) {
-            add(answerFields[i]);
+            questionPanel.add(answerFields[i]);
         }
-        add(submitButton);
 
-        submitButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                submitQuestion();
-            }
-        });
+        buttonPanel.add(nextButton);
+
+        mainPanel.add(questionPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        add(mainPanel);
+        setVisible(true);
     }
 
-    private void startQuiz() {
+    private void startServer() {
         try {
-            int numQuestions = Integer.parseInt(numQuestionsField.getText());
-            questions = new ArrayList<>();
-            answersMap = new HashMap<>();
-            for (int i = 0; i < numQuestions; i++) {
-                String question = JOptionPane.showInputDialog("Enter question " + (i + 1) + ":");
-                questions.add(question);
-                String[] options = new String[4];
-                for (int j = 0; j < 4; j++) {
-                    options[j] = JOptionPane.showInputDialog("Enter option " + (char) ('A' + j) + " for question " + (i + 1) + ":");
-                }
-                answersMap.put(question, options);
+            ServerSocket serverSocket = new ServerSocket(4800);
+            System.out.println("Server Started....");
+            System.out.println("Waiting for students to connect...");
+
+            // Start accepting client connections
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New client connected: " + clientSocket);
+
+                ClientHandler clientHandler = new ClientHandler(clientSocket);
+                new Thread(clientHandler).start();
             }
-            questionArea.setText("Questions created. You can now start the server.");
-            startButton.setEnabled(false);
-            submitButton.setEnabled(true);
-            serverSocket = new ServerSocket(4800);
-        } catch (NumberFormatException | IOException ex) {
-            JOptionPane.showMessageDialog(this, "Invalid input or error occurred.");
-        }
-    }
-
-    private void submitQuestion() {
-        try {
-            Socket clientSocket = serverSocket.accept();
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-
-            int numQuestions = questions.size();
-            out.println(numQuestions);
-
-            for (String question : questions) {
-                out.println(question);
-                String[] options = answersMap.get(question);
-                for (String option : options) {
-                    out.println(option);
-                }
-            }
-
-            clientSocket.close();
-        } catch (IOException ex) {
-            ex.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                new QuizServerGUI().setVisible(true);
+                new QuizServerGUI();
             }
         });
     }
+
+    // Inner classes remain the same as in your original code
 }

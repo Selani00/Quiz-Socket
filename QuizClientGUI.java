@@ -65,9 +65,11 @@ public class QuizClientGUI extends JFrame {
         setLocationRelativeTo(null);
     }
 
+    // 
+
     private void startQuiz() {
         try {
-            socket = new Socket("localhost", 4800);
+            socket = new Socket("192.168.1.60", 4800);
             serverIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
             userInput = new BufferedReader(new InputStreamReader(System.in));
